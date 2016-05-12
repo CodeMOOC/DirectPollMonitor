@@ -4,8 +4,3 @@
 *.suo
 **/.vs
 **/packages/*
-packages\*
-DirectPollMonitor/bin/
-DirectPollMonitor/obj/
-packages/
-
