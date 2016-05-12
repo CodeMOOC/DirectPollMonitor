@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using WebSocketSharp;
-using Newtonsoft;
-using System.Text.RegularExpressions;
 using WindowsInput;
 using WindowsInput.Native;
-using Newtonsoft.Json.Linq;
 
 
 namespace DirectPollMonitor {
@@ -24,7 +22,6 @@ namespace DirectPollMonitor {
                 Console.Error.WriteLine(error);
                 Console.ForegroundColor = prevColor;
             }
-
 
             Console.Error.WriteLine("Usage: {0} <DirectPoll URL>",
                 System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
