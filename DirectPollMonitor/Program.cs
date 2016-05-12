@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WebSocketSharp;
 using Newtonsoft;
+using System.Text.RegularExpressions;
 
 namespace DirectPollMonitor {
 
@@ -25,13 +26,21 @@ namespace DirectPollMonitor {
             Environment.Exit(1);
         }
 
+        private static Regex _urlRegex = new Regex(@"(https?://)?directpoll.com/r\?([^$]*)", RegexOptions.Singleline);
+
         public static void Main(string[] args) {
             if(args.Length < 1) {
                 HelpAndTerminate(null);
-                return;
             }
 
-            using (var s = new WebSocket(args[0],
+            var urlMatch = _urlRegex.Match(args[0]);
+            if(!urlMatch.Success || urlMatch.Groups.Count < 3) {
+                HelpAndTerminate("Input URL does not look like a correct DirectPoll address");
+            }
+
+            string pollId = urlMatch.Groups[2].Value;
+
+            using (var s = new WebSocket(string.Format("ws://directpoll.com/wsr?{0}", pollId),
                 CancellationToken.None, 102392, null, OnClose, OnMessage, OnError)) {
                 s.Origin = "http://directpoll.com";
 
