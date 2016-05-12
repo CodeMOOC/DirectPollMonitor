@@ -75,7 +75,7 @@ namespace DirectPollMonitor {
                 var response = await args.Text.ReadToEndAsync();
                 JToken payload = JToken.Parse(response);
 
-                if("hi".Equals(response, StringComparison.InvariantCultureIgnoreCase)) {
+                if ("\"hi\"".Equals(response, StringComparison.InvariantCultureIgnoreCase)) {
                     //This is a keepalive message
                     return;
                 }
