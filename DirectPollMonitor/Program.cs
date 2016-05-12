@@ -59,24 +59,9 @@ namespace DirectPollMonitor {
                     return;
                 }
 
-                using (Timer t = new Timer(OnTimerTick, s, 10000, 10000)) {
-                    Console.WriteLine("Running (press ANY key to terminate)...");
-                    Console.Read();
-                }
+                Console.WriteLine("Running (press ANY key to terminate)...");
+                Console.Read();
             }
-        }
-
-        private static void OnTimerTick(object something) {
-
-            return;
-            /*
-            WebSocket socket = (WebSocket)something;
-
-            var sendTask = socket.Send("hi");
-            sendTask.Wait();
-            if(!sendTask.Result) {
-                HelpAndTerminate("Periodic HI failed to send");
-            }*/
         }
 
         private static Task OnClose(CloseEventArgs args) {
