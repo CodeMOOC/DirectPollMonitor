@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using WebSocketSharp;
 using Newtonsoft;
 using System.Text.RegularExpressions;
+using WindowsInput.Native;
 
 namespace DirectPollMonitor {
 
@@ -94,7 +95,29 @@ namespace DirectPollMonitor {
         private static int[] _lastVotes = null;
 
         private static void HandleVotesUpdate(string json) {
+        }
 
+        private static WindowsInput.InputSimulator _simulator = new WindowsInput.InputSimulator();
+
+        private static void ProcessVotes(int questionId, int answerId, int totalCount, int delta) {
+            while (delta-- > 0) {
+                _simulator.Keyboard.KeyPress(ConvertAnswerIdToKeyCode(answerId));
+            }
+        }
+
+        private static VirtualKeyCode ConvertAnswerIdToKeyCode(int answerId) {
+            if(answerId >= 1 && answerId <= 10) {
+                //Numeric range
+                return VirtualKeyCode.VK_0 + answerId - 1;
+            }
+            else if(answerId > 10 && answerId <= 10 + 26) {
+                //Alphabetic range
+                return VirtualKeyCode.VK_A + answerId - 1;
+            }
+            else {
+                Console.Error.WriteLine("Defaulting to SPACE character generation for answer #{0}", answerId);
+                return VirtualKeyCode.SPACE;
+            }
         }
 
     }
