@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using WebSocketSharp;
 using Newtonsoft;
 using System.Text.RegularExpressions;
+using WindowsInput;
 using WindowsInput.Native;
 using Newtonsoft.Json.Linq;
 
@@ -16,7 +17,7 @@ namespace DirectPollMonitor {
     public class Program {
 
         private static void HelpAndTerminate(string error) {
-            if(!string.IsNullOrEmpty(error)) {
+            if (!string.IsNullOrEmpty(error)) {
                 var prevColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.Error.Write("Error: ");
@@ -33,12 +34,12 @@ namespace DirectPollMonitor {
         private static Regex _urlRegex = new Regex(@"(https?://)?directpoll.com/r\?([^$]*)", RegexOptions.Singleline);
 
         public static void Main(string[] args) {
-            if(args.Length < 1) {
+            if (args.Length < 1) {
                 HelpAndTerminate(null);
             }
 
             var urlMatch = _urlRegex.Match(args[0]);
-            if(!urlMatch.Success || urlMatch.Groups.Count < 3) {
+            if (!urlMatch.Success || urlMatch.Groups.Count < 3) {
                 HelpAndTerminate("Input URL does not look like a correct DirectPoll address");
             }
 
@@ -85,7 +86,7 @@ namespace DirectPollMonitor {
         }
 
         private static async Task OnMessage(MessageEventArgs args) {
-            if(args.Opcode == Opcode.Text) {
+            if (args.Opcode == Opcode.Text) {
                 var response = await args.Text.ReadToEndAsync();
                 JToken payload = JToken.Parse(response);
 
@@ -100,8 +101,7 @@ namespace DirectPollMonitor {
                     //var newStatus = ExtractStatus(payload);
 
                     var newVote = GetNewVote(newVotes);
-                    if (newVote != null)
-                    {
+                    if (newVote != null) {
                         HandleNewVote(newVote);
                     }
                     _lastVotes = newVotes;
@@ -114,12 +114,10 @@ namespace DirectPollMonitor {
             return payload.SelectToken("a") != null;
         }
 
-        private static string GetNewVote(Dictionary<string, int> newVotes)
-        {
+        private static string GetNewVote(Dictionary<string, int> newVotes) {
             if (_lastVotes != null) {
                 var diff = newVotes.Except(_lastVotes).Concat(_lastVotes.Except(newVotes));
-                foreach(var d in diff)
-                {
+                foreach (var d in diff) {
                     if (d.Value != 0) {
                         return d.Key;
                     }
@@ -129,15 +127,13 @@ namespace DirectPollMonitor {
             return null;
         }
 
-        private static object ExtractStatus(JToken payload)
-        {
+        private static object ExtractStatus(JToken payload) {
             return (payload.SelectToken("s") as JProperty).Value;
         }
 
-        private static Dictionary<string, int> ExtractVotes(JToken payload)
-        {
-            return payload.SelectToken("a").Children().Select(
-                a => a as JProperty).ToDictionary(p => p.Name, p => (int) p.Value);
+        private static Dictionary<string, int> ExtractVotes(JToken payload) {
+            return payload.Children().Select(
+                a => a as JProperty).ToDictionary(p => p.Name, p => (int)p.Value);
         }
 
         private static Task OnError(ErrorEventArgs args) {
@@ -150,10 +146,7 @@ namespace DirectPollMonitor {
         private static Dictionary<string, int> _lastVotes = null;
         private static string _lastStatus = null;
 
-        private static void HandleVotesUpdate(string json) {
-        }
-
-        private static WindowsInput.InputSimulator _simulator = new WindowsInput.InputSimulator();
+        private static InputSimulator _simulator = new InputSimulator();
 
         private static void ProcessVotes(int questionId, int answerId, int totalCount, int delta) {
             while (delta-- > 0) {
@@ -162,11 +155,11 @@ namespace DirectPollMonitor {
         }
 
         private static VirtualKeyCode ConvertAnswerIdToKeyCode(int answerId) {
-            if(answerId >= 1 && answerId <= 10) {
+            if (answerId >= 1 && answerId <= 10) {
                 //Numeric range
                 return VirtualKeyCode.VK_0 + answerId - 1;
             }
-            else if(answerId > 10 && answerId <= 10 + 26) {
+            else if (answerId > 10 && answerId <= 10 + 26) {
                 //Alphabetic range
                 return VirtualKeyCode.VK_A + answerId - 1;
             }
@@ -176,14 +169,12 @@ namespace DirectPollMonitor {
             }
         }
 
-        private static void HandleNewVote(string vote)
-        {
+        private static void HandleNewVote(string vote) {
             Console.WriteLine("New vote for {0}!", vote);
         }
 
-        private static void HandleStatusChange(string newStatus)
-        {
-            
+        private static void HandleStatusChange(string newStatus) {
+
         }
 
     }
