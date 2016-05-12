@@ -8,6 +8,8 @@ using WebSocketSharp;
 using Newtonsoft;
 using System.Text.RegularExpressions;
 using WindowsInput.Native;
+using Newtonsoft.Json.Linq;
+
 
 namespace DirectPollMonitor {
 
@@ -22,9 +24,9 @@ namespace DirectPollMonitor {
                 Console.ForegroundColor = prevColor;
             }
 
+
             Console.Error.WriteLine("Usage: {0} <DirectPoll URL>",
                 System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
-
             Environment.Exit(1);
         }
 
@@ -64,13 +66,16 @@ namespace DirectPollMonitor {
         }
 
         private static void OnTimerTick(object something) {
+
+            return;
+            /*
             WebSocket socket = (WebSocket)something;
 
             var sendTask = socket.Send("hi");
             sendTask.Wait();
             if(!sendTask.Result) {
                 HelpAndTerminate("Periodic HI failed to send");
-            }
+            }*/
         }
 
         private static Task OnClose(CloseEventArgs args) {
@@ -82,8 +87,53 @@ namespace DirectPollMonitor {
         private static async Task OnMessage(MessageEventArgs args) {
             if(args.Opcode == Opcode.Text) {
                 var response = await args.Text.ReadToEndAsync();
-                
+                JToken payload = JToken.Parse(response);
+
+
+                if (IsUsefulPayload(payload))
+                {
+                    var newVotes = ExtractVotes(payload);
+                    //var newStatus = ExtractStatus(payload);
+
+                    var newVote = GetNewVote(newVotes);
+                    if (newVote != null)
+                    {
+                        HandleNewVote(newVote);
+                    }
+                    _lastVotes = newVotes;
+                }
             }
+        }
+
+        private static bool IsUsefulPayload(JToken payload)
+        {
+            return payload.SelectToken("a") != null;
+        }
+
+        private static string GetNewVote(Dictionary<string, int> newVotes)
+        {
+            if (_lastVotes != null) {
+                var diff = newVotes.Except(_lastVotes).Concat(_lastVotes.Except(newVotes));
+                foreach(var d in diff)
+                {
+                    if (d.Value != 0) {
+                        return d.Key;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static object ExtractStatus(JToken payload)
+        {
+            return (payload.SelectToken("s") as JProperty).Value;
+        }
+
+        private static Dictionary<string, int> ExtractVotes(JToken payload)
+        {
+            return payload.SelectToken("a").Children().Select(
+                a => a as JProperty).ToDictionary(p => p.Name, p => (int) p.Value);
         }
 
         private static Task OnError(ErrorEventArgs args) {
@@ -93,7 +143,8 @@ namespace DirectPollMonitor {
             return Task.FromResult<object>(null);
         }
 
-        private static int[] _lastVotes = null;
+        private static Dictionary<string, int> _lastVotes = null;
+        private static string _lastStatus = null;
 
         private static void HandleVotesUpdate(string json) {
         }
@@ -119,6 +170,16 @@ namespace DirectPollMonitor {
                 Console.Error.WriteLine("Defaulting to SPACE character generation for answer #{0}", answerId);
                 return VirtualKeyCode.SPACE;
             }
+        }
+
+        private static void HandleNewVote(string vote)
+        {
+            Console.WriteLine("New vote for {0}!", vote);
+        }
+
+        private static void HandleStatusChange(string newStatus)
+        {
+            
         }
 
     }
