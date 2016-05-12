@@ -70,55 +70,82 @@ namespace DirectPollMonitor {
             return Task.FromResult<object>(null);
         }
 
+        private static Regex _answerRegex = new Regex(@"q([0-9]*)a([0-9]*)", RegexOptions.Singleline | RegexOptions.Compiled);
+
         private static async Task OnMessage(MessageEventArgs args) {
             if (args.Opcode == Opcode.Text) {
                 var response = await args.Text.ReadToEndAsync();
-                JToken payload = JToken.Parse(response);
 
                 if ("\"hi\"".Equals(response, StringComparison.InvariantCultureIgnoreCase)) {
                     //This is a keepalive message
                     return;
                 }
 
-                if (IsUsefulPayload(payload))
-                {
-                    var newVotes = ExtractVotes(payload);
-                    //var newStatus = ExtractStatus(payload);
+                try {
+                    Console.WriteLine(response);
 
-                    var newVote = GetNewVote(newVotes);
-                    if (newVote != null) {
-                        HandleNewVote(newVote);
-                    }
-                    _lastVotes = newVotes;
+                    ProcessPayload(JObject.Parse(response));
+                }
+                catch (Exception ex) {
+                    Console.Error.WriteLine("Message contains invalid JSON ({0})", ex);
+                    return;
                 }
             }
         }
 
-        private static bool IsUsefulPayload(JToken payload)
-        {
-            return payload.SelectToken("a") != null;
-        }
+        private static int _lastStatus = -1;
 
-        private static string GetNewVote(Dictionary<string, int> newVotes) {
-            if (_lastVotes != null) {
-                var diff = newVotes.Except(_lastVotes).Concat(_lastVotes.Except(newVotes));
-                foreach (var d in diff) {
-                    if (d.Value != 0) {
-                        return d.Key;
-                    }
-                }
+        private static void ProcessPayload(JObject payload) {
+            //Process answers
+            var answers = payload["a"] as JObject;
+            if (answers != null) {
+                var newVotes = ExtractVotes(answers);
+
+                MatchVotes(_lastVotes, newVotes);
+                
+                _lastVotes = newVotes;
             }
 
-            return null;
-        }
-
-        private static object ExtractStatus(JToken payload) {
-            return (payload.SelectToken("s") as JProperty).Value;
+            //Process status change
+            var status = payload["s"] as JValue;
+            if (status != null) {
+                var newStatus = status.Value<int>();
+                if (newStatus != _lastStatus) {
+                    Console.WriteLine("New poll status {0}", newStatus);
+                    _lastStatus = newStatus;
+                }
+            }
         }
 
         private static Dictionary<string, int> ExtractVotes(JToken payload) {
             return payload.Children().Select(
                 a => a as JProperty).ToDictionary(p => p.Name, p => (int)p.Value);
+        }
+
+        private static void MatchVotes(IDictionary<string, int> old, IDictionary<string, int> update) {
+            if(old == null) {
+                //First batch of votes we get, ignore
+                return;
+            }
+
+            foreach(var answer in update) {
+                int prevCount = 0;
+                if(old.ContainsKey(answer.Key)) {
+                    prevCount = old[answer.Key];
+                }
+
+                int delta = answer.Value - prevCount;
+
+                var answerMatch = _answerRegex.Match(answer.Key);
+                if(!answerMatch.Success) {
+                    throw new ArgumentException($"Cannot parse answer {answer.Key}");
+                }
+
+                int questionIndex = Convert.ToInt32(answerMatch.Groups[1].Value);
+                int answerIndex = Convert.ToInt32(answerMatch.Groups[2].Value);
+
+                ProcessVotes(questionIndex, answerIndex, answer.Value, delta);
+            }
         }
 
         private static Task OnError(ErrorEventArgs args) {
@@ -129,7 +156,6 @@ namespace DirectPollMonitor {
         }
 
         private static Dictionary<string, int> _lastVotes = null;
-        private static string _lastStatus = null;
 
         private static InputSimulator _simulator = new InputSimulator();
 
@@ -152,14 +178,6 @@ namespace DirectPollMonitor {
                 Console.Error.WriteLine("Defaulting to SPACE character generation for answer #{0}", answerId);
                 return VirtualKeyCode.SPACE;
             }
-        }
-
-        private static void HandleNewVote(string vote) {
-            Console.WriteLine("New vote for {0}!", vote);
-        }
-
-        private static void HandleStatusChange(string newStatus) {
-
         }
 
     }
