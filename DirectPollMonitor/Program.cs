@@ -160,6 +160,10 @@ namespace DirectPollMonitor {
         private static InputSimulator _simulator = new InputSimulator();
 
         private static void ProcessVotes(int questionId, int answerId, int totalCount, int delta) {
+            if (delta > 0) {
+                Console.WriteLine("Q{0} A{1} Votes: {2} (+{3})", questionId, answerId, totalCount, delta);
+            }
+
             while (delta-- > 0) {
                 _simulator.Keyboard.KeyPress(ConvertAnswerIdToKeyCode(answerId));
             }
