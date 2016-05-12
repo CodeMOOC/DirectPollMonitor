@@ -22,7 +22,8 @@ namespace DirectPollMonitor {
                 Console.ForegroundColor = prevColor;
             }
 
-            Console.Error.WriteLine("Usage: {0}.exe <DirectPoll URL>", System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            Console.Error.WriteLine("Usage: {0} <DirectPoll URL>",
+                System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
             Environment.Exit(1);
         }
