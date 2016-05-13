@@ -9,7 +9,6 @@ using WebSocketSharp;
 using WindowsInput;
 using WindowsInput.Native;
 
-
 namespace DirectPollMonitor {
 
     public class Program {
@@ -41,12 +40,13 @@ namespace DirectPollMonitor {
             }
 
             string pollId = urlMatch.Groups[2].Value;
+            string wsUrl = string.Format("ws://directpoll.com/wsr?{0}", pollId);
 
-            using (var s = new WebSocket(string.Format("ws://directpoll.com/wsr?{0}", pollId),
+            using (var s = new WebSocket(wsUrl,
                 CancellationToken.None, 102392, null, OnClose, OnMessage, OnError)) {
                 s.Origin = "http://directpoll.com";
 
-                Console.WriteLine("Opening connection to {0}...", args[0]);
+                Console.WriteLine("Opening connection to {0}...", wsUrl);
 
                 var connection = s.Connect();
                 connection.Wait();
@@ -78,9 +78,11 @@ namespace DirectPollMonitor {
                     return;
                 }
 
-                try {
-                    Console.WriteLine(response);
+#if DEBUG
+                Console.WriteLine(response);
+#endif
 
+                try {
                     ProcessPayload(JObject.Parse(response));
                 }
                 catch (Exception ex) {
@@ -157,12 +159,15 @@ namespace DirectPollMonitor {
         private static InputSimulator _simulator = new InputSimulator();
 
         private static void ProcessVotes(int questionId, int answerId, int totalCount, int delta) {
+            var keyCode = ConvertAnswerIdToKeyCode(answerId);
+
             if (delta > 0) {
-                Console.WriteLine("Q{0} A{1} Votes: {2} (+{3})", questionId, answerId, totalCount, delta);
+                Console.WriteLine("Q{0} A{1} Votes: {2} (+{3}) => {4}",
+                    questionId, answerId, totalCount, delta, keyCode);
             }
 
             while (delta-- > 0) {
-                _simulator.Keyboard.KeyPress(ConvertAnswerIdToKeyCode(answerId));
+                _simulator.Keyboard.KeyPress(keyCode);
             }
         }
 
