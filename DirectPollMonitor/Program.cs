@@ -95,24 +95,27 @@ namespace DirectPollMonitor {
         private static int _lastStatus = -1;
 
         private static void ProcessPayload(JObject payload) {
+            //Process status change
+            var status = payload["s"] as JValue;
+            if (status != null) {
+                var newStatus = status.Value<int>();
+                if (newStatus != _lastStatus && _lastStatus != -1) {
+                    var keyCode = VirtualKeyCode.VK_0 + newStatus;
+                    Console.WriteLine("New poll status {0} => {1}",
+                        (PollStatus)newStatus, keyCode);
+                    _simulator.Keyboard.KeyPress(keyCode);
+                }
+                _lastStatus = newStatus;
+            }
+
             //Process answers
             var answers = payload["a"] as JObject;
             if (answers != null) {
                 var newVotes = ExtractVotes(answers);
 
                 MatchVotes(_lastVotes, newVotes);
-                
-                _lastVotes = newVotes;
-            }
 
-            //Process status change
-            var status = payload["s"] as JValue;
-            if (status != null) {
-                var newStatus = status.Value<int>();
-                if (newStatus != _lastStatus) {
-                    Console.WriteLine("New poll status {0}", newStatus);
-                    _lastStatus = newStatus;
-                }
+                _lastVotes = newVotes;
             }
         }
 
@@ -174,11 +177,7 @@ namespace DirectPollMonitor {
         }
 
         private static VirtualKeyCode ConvertAnswerIdToKeyCode(int answerId) {
-            if (answerId >= 1 && answerId <= 10) {
-                //Numeric range
-                return VirtualKeyCode.VK_0 + answerId - 1;
-            }
-            else if (answerId > 10 && answerId <= 10 + 26) {
+            if (answerId >= 1 && answerId <= 26) {
                 //Alphabetic range
                 return VirtualKeyCode.VK_A + answerId - 1;
             }
