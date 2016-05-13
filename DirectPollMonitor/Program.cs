@@ -128,22 +128,24 @@ namespace DirectPollMonitor {
             }
 
             foreach(var answer in update) {
-                int prevCount = 0;
-                if(old.ContainsKey(answer.Key)) {
-                    prevCount = old[answer.Key];
+                if (old.ContainsKey(answer.Key)) {
+                    //Can compute delta
+                    int delta = answer.Value - old[answer.Key];
+
+                    var answerMatch = _answerRegex.Match(answer.Key);
+                    if (!answerMatch.Success) {
+                        throw new ArgumentException($"Cannot parse answer {answer.Key}");
+                    }
+
+                    int questionIndex = Convert.ToInt32(answerMatch.Groups[1].Value);
+                    int answerIndex = Convert.ToInt32(answerMatch.Groups[2].Value);
+
+                    ProcessVotes(questionIndex, answerIndex, answer.Value, delta);
                 }
-
-                int delta = answer.Value - prevCount;
-
-                var answerMatch = _answerRegex.Match(answer.Key);
-                if(!answerMatch.Success) {
-                    throw new ArgumentException($"Cannot parse answer {answer.Key}");
+                else {
+                    //New answer (or different question)
+                    //Ignore
                 }
-
-                int questionIndex = Convert.ToInt32(answerMatch.Groups[1].Value);
-                int answerIndex = Convert.ToInt32(answerMatch.Groups[2].Value);
-
-                ProcessVotes(questionIndex, answerIndex, answer.Value, delta);
             }
         }
 
